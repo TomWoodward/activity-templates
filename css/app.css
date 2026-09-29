@@ -149,6 +149,8 @@ body {
 .mode-panel[hidden] { display: none; }
 
 .field { display: flex; flex-direction: column; gap: 4px; }
+.field-group { display: flex; flex-direction: column; gap: 8px; }
+.field-group .field-row .field__label { font-weight: 400; font-size: 0.85rem; color: var(--muted); }
 .field__label { font-weight: 600; font-size: 0.9rem; }
 .field__hint { color: var(--muted); font-size: 0.8rem; line-height: 1.35; }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -246,6 +248,45 @@ body {
 
 .check input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
 
+/* Collapsible "Advanced" group */
+.disclosure { border-top: 1px solid var(--line); padding-top: 14px; }
+
+.disclosure__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.disclosure__summary::-webkit-details-marker { display: none; }
+
+.disclosure__summary::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.15s;
+}
+
+.disclosure[open] > .disclosure__summary::after { transform: translateY(2px) rotate(-135deg); }
+
+.disclosure__summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+.disclosure__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 14px;
+}
+
 .status:empty { display: none; }
 .status__msg {
   margin: 0;
@@ -313,7 +354,11 @@ body {
 .sheet {
   width: 8.5in;
   min-height: 11in;
-  padding: 0.5in;
+  padding:
+    var(--page-margin-top, 0.5in)
+    var(--page-margin-right, 0.5in)
+    var(--page-margin-bottom, 0.5in)
+    var(--page-margin-left, 0.5in);
   background: #fff;
   color: #000;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
@@ -439,6 +484,7 @@ body {
 
 /* ---------- Print ---------- */
 
+/* Margins are overridden at runtime by setPageMargins() in js/components/sheet.js */
 @page {
   size: letter;
   margin: 0.5in;

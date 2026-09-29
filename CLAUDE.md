@@ -18,9 +18,9 @@ The primary output is **paper**. The on-screen view is a preview of printed page
 - `js/activities/registry.js`: the list of activities. Each module default-exports `{ id, name, description, render(container) }`. The `id` is the URL hash.
 - `js/dom.js`: `h(tag, attrs, ...children)` builds elements. `on*` function attrs become listeners. `style` objects support CSS custom properties (`'--cell': '0.4in'`). Use `svg()` for SVG elements.
 - `js/components/`: shared building blocks. Reuse these, and extend them rather than forking per activity:
-  - `sheet.js`: `sheet(...)` is one printed page. `sheetHeader({ title, fields })` makes the Name/Date blanks (`fields: []` hides them, as on the answer key).
+  - `sheet.js`: `sheet(...)` is one printed page. `sheetHeader({ title, fields })` makes the Name/Date blanks (`fields: []` hides them, as on the answer key). It also owns page geometry. Margins are always an object `{ top, right, bottom, left }` in inches: `printableArea(margins)`, `setPageMargins(margins)`, `DEFAULT_MARGINS`, `MARGIN_RANGE`.
   - `preview.js`: `createPreview()` returns `{ el, show(pages) }`, with `pages` as `[{ label, sheet }]`. It scales sheets to fit the column using `zoom: var(--preview-scale)`, which print resets to 1.
-  - `form.js`: `section`, `field`, `numberInput` (updates live while typing, clamps on blur), `checkbox` (`variant: 'chip'` for toggle buttons), `segmented`, `button`. `field()` auto-assigns id/name so labels work.
+  - `form.js`: `section`, `field`, `numberInput` (updates live while typing, clamps and snaps to `step` on blur), `checkbox` (`variant: 'chip'` for toggle buttons), `segmented`, `disclosure` (collapsible "Advanced" group), `marginFields(margins, onchange)` (the four margin inputs, which mutate `margins` in place), `button`. `field()` auto-assigns id/name so labels work.
 - Activity page structure, which new activities should copy from `word-search/index.js`:
   ```
   .workspace
@@ -34,7 +34,8 @@ The primary output is **paper**. The on-screen view is a preview of printed page
 
 ## Print layout rules (learned the hard way)
 
-- Page is US Letter with `@page { margin: 0.5in }`, so the printable area is **7.5in × 10in**. On screen `.sheet` is 8.5in × 11in with 0.5in padding; in print the padding is removed and the page margin takes over.
+- Page is US Letter. **Margins are a user setting**, per side (Advanced → Page margins, 0.25–1.5in each, default 0.5in), because changing margins in the browser's print dialog overflows layouts sized for a fixed area. An activity keeps `margins: { ...DEFAULT_MARGINS }` in its state, renders `marginFields()` inside its Advanced `disclosure()`, and calls `setPageMargins(state.margins)` on every update. That rewrites a runtime `<style>` with `@page { margin }` for print and `--page-margin-{top,right,bottom,left}` for the on-screen `.sheet` padding. The router resets it to the defaults on every route change.
+- Size content against `printableArea(margins)` (default 7.5in × 10in), never hard-coded page dimensions. When shrinking content to fit makes it unusable, warn in the status area rather than overflowing or silently printing something unreadable (word search warns below 0.25in grid squares). In print, `.sheet` padding is removed and the `@page` margin takes over.
 - Size printed content in **physical units (in/pt)**, never px or viewport units. Activities do their own fit-to-page math (see `cellSize()` / `wordBankHeight()` in `word-search/index.js`). If you add content to a page, reserve height for it or the page will overflow onto a second sheet.
 - **Media queries for screen-only layout must say `screen and`.** A printed Letter page is ~720px wide, so a bare `@media (max-width: 860px)` also applies in print and breaks pagination.
 - **Don't use CSS multi-column (`column-count`) on sheets.** Chrome splits the columns across printed pages. Use CSS grid instead (the word bank uses `grid-auto-flow: column` with `--bank-rows`).

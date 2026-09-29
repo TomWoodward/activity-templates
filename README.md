@@ -19,7 +19,7 @@ Any static file server also works (for example, `python3 -m http.server`). Openi
 
 ## Printing
 
-Every page is laid out for US Letter with 0.5in margins. Use the **Print** button, or your browser's print command. The controls are hidden in print, and the answer key prints on its own page.
+Every page is laid out for US Letter. Margins default to 0.5in and can be set per side under **Advanced** in the settings. Set them there rather than in the print dialog, since the layout is sized to fit the margins you choose. Use the **Print** button, or your browser's print command. The controls are hidden in print, and the answer key prints on its own page.
 
 ## Deploying
 

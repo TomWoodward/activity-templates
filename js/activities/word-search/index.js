@@ -1,18 +1,22 @@
 import { h, svg } from '../../dom.js';
-import { sheet, sheetHeader } from '../../components/sheet.js';
+import {
+  sheet, sheetHeader, printableArea, setPageMargins, DEFAULT_MARGINS,
+} from '../../components/sheet.js';
 import { createPreview } from '../../components/preview.js';
-import { section, field, numberInput, checkbox, segmented, button } from '../../components/form.js';
+import {
+  section, field, numberInput, checkbox, segmented, button, disclosure, marginFields,
+} from '../../components/form.js';
 import { parseWordList, generatePuzzle, answerCells } from './generator.js';
 
 const MIN_SIZE = 5;
 const MAX_SIZE = 30;
 
-// Printable area of a US Letter page with 0.5in margins, in inches.
-const PAGE_WIDTH_IN = 7.5;
-const PAGE_HEIGHT_IN = 10;
 const HEADER_HEIGHT_IN = 1.4; // includes the Name/Date row
 const NAME_DATE_HEIGHT_IN = 0.45;
 const MAX_CELL_IN = 0.5;
+const MIN_READABLE_CELL_IN = 0.25; // below this, warn that the grid is hard to use
+const BLANK_LINE_HEIGHT_IN = 0.45;
+const WORD_LINE_HEIGHT_IN = 0.3;
 const WORD_BANK_COLUMNS = 3;
 
 function defaultState() {
@@ -24,6 +28,7 @@ function defaultState() {
     wordsText: '',
     directions: { horizontal: true, vertical: true, diagonal: true, backwards: false },
     showNameDate: true,
+    margins: { ...DEFAULT_MARGINS },
     showWordBank: true,
     answerKey: true,
     blankLines: 12,
@@ -39,13 +44,22 @@ function headerHeight(state) {
 }
 
 // Largest square cell that fits the grid plus everything else on the page.
-function cellSize(rows, cols, reservedHeightIn) {
-  return Math.min(MAX_CELL_IN, PAGE_WIDTH_IN / cols, (PAGE_HEIGHT_IN - reservedHeightIn) / rows);
+function cellSize(state, reservedHeightIn) {
+  const { width, height } = printableArea(state.margins);
+  return Math.min(MAX_CELL_IN, width / state.cols, (height - reservedHeightIn) / state.rows);
 }
 
 function wordBankHeight(itemCount, lineHeightIn) {
   if (itemCount === 0) return 0;
   return 0.5 + Math.ceil(itemCount / WORD_BANK_COLUMNS) * lineHeightIn;
+}
+
+function blankCellSize(state) {
+  return cellSize(state, headerHeight(state) + wordBankHeight(state.blankLines, BLANK_LINE_HEIGHT_IN));
+}
+
+function puzzleCellSize(state, bankWordCount) {
+  return cellSize(state, headerHeight(state) + wordBankHeight(bankWordCount, WORD_LINE_HEIGHT_IN));
 }
 
 function gridView({ rows, cols, letters, cellIn, lined = false, placements = null }) {
@@ -98,12 +112,11 @@ function wordBankView({ words, blankLines }) {
 }
 
 function blankSheets(state) {
-  const reserved = headerHeight(state) + wordBankHeight(state.blankLines, 0.45);
   return [{
     label: 'Blank template',
     sheet: sheet(
       studentHeader(state),
-      gridView({ rows: state.rows, cols: state.cols, cellIn: cellSize(state.rows, state.cols, reserved), lined: true }),
+      gridView({ rows: state.rows, cols: state.cols, cellIn: blankCellSize(state), lined: true }),
       state.blankLines > 0 && wordBankView({ blankLines: state.blankLines }),
     ),
   }];
@@ -111,8 +124,7 @@ function blankSheets(state) {
 
 function puzzleSheets(state, puzzle) {
   const bankWords = state.showWordBank ? puzzle.placements : [];
-  const reserved = headerHeight(state) + wordBankHeight(bankWords.length, 0.3);
-  const cellIn = cellSize(state.rows, state.cols, reserved);
+  const cellIn = puzzleCellSize(state, bankWords.length);
   const grid = { rows: state.rows, cols: state.cols, letters: puzzle.grid, cellIn };
 
   const pages = [{
@@ -164,9 +176,13 @@ function render(container) {
     wordsPanel.hidden = !isWords;
     blankPanel.hidden = isWords;
     shuffleButton.hidden = !isWords;
+    setPageMargins(state.margins);
 
     if (!isWords) {
-      status.replaceChildren();
+      showMessages(smallGridWarning(
+        blankCellSize(state),
+        `fewer rows${state.blankLines > 0 ? ', fewer word bank lines,' : ''} or smaller margins`,
+      ));
       preview.show(blankSheets(state));
       return;
     }
@@ -184,8 +200,22 @@ function render(container) {
     if (words.length > 0 && puzzle.unplaced.length > 0) {
       messages.push(`Couldn't fit: ${puzzle.unplaced.map((w) => w.display).join(', ')}. Try a bigger grid or more directions.`);
     }
-    status.replaceChildren(...messages.map((m) => h('p', { class: 'status__msg' }, m)));
+    const bankCount = state.showWordBank ? puzzle.placements.length : 0;
+    messages.push(smallGridWarning(
+      puzzleCellSize(state, bankCount),
+      `fewer rows${bankCount > 0 ? ', fewer words, hiding the word bank,' : ''} or smaller margins`,
+    ));
+    showMessages(...messages);
     preview.show(puzzleSheets(state, puzzle));
+  }
+
+  function showMessages(...messages) {
+    status.replaceChildren(...messages.filter(Boolean).map((m) => h('p', { class: 'status__msg' }, m)));
+  }
+
+  function smallGridWarning(cellIn, suggestions) {
+    if (cellIn >= MIN_READABLE_CELL_IN) return null;
+    return `Grid squares are only ${cellIn.toFixed(2)}in wide, which may be hard to read. Try ${suggestions}.`;
   }
 
   let typingTimer;
@@ -264,10 +294,13 @@ function render(container) {
           sizeField('Columns', 'cols'),
         ),
         h('div', { class: 'field__hint' }, `Grid size can be ${MIN_SIZE}–${MAX_SIZE} in each direction.`),
-        checkbox('Name and date lines', state.showNameDate, (v) => { state.showNameDate = v; update(); }),
       ),
       blankPanel,
       wordsPanel,
+      disclosure('Advanced',
+        marginFields(state.margins, () => update()),
+        checkbox('Name and date lines', state.showNameDate, (v) => { state.showNameDate = v; update(); }),
+      ),
     ),
     h('div', { class: 'controls__footer' },
       status,

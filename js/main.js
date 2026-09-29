@@ -1,5 +1,6 @@
 import { h } from './dom.js';
 import { activities, getActivity } from './activities/registry.js';
+import { setPageMargins, DEFAULT_MARGINS } from './components/sheet.js';
 
 const app = document.getElementById('app');
 
@@ -27,6 +28,7 @@ function route() {
   const activity = id ? getActivity(id) : null;
 
   app.replaceChildren();
+  setPageMargins(DEFAULT_MARGINS);
   if (activity) {
     document.title = `${activity.name} · Activity Templates`;
     activity.render(app);

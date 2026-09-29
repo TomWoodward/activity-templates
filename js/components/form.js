@@ -1,4 +1,5 @@
 import { h } from '../dom.js';
+import { MARGIN_RANGE } from './sheet.js';
 
 // Shared control-panel building blocks for activity pages.
 
@@ -23,26 +24,55 @@ export function field(label, control, hint) {
   );
 }
 
-// Number input that updates live while typing valid values and clamps on blur.
-export function numberInput({ value, min, max, onvalue }) {
-  const valid = (n) => Number.isInteger(n) && n >= min && n <= max;
+// Number input that updates live while typing valid values, and clamps and
+// snaps to `step` on blur.
+export function numberInput({ value, min, max, step = 1, onvalue }) {
+  const decimals = (String(step).split('.')[1] ?? '').length;
+  const snap = (n) => Number((Math.round(n / step) * step).toFixed(decimals));
+  const read = (input) => (input.value === '' ? NaN : Number(input.value));
   return h('input', {
     type: 'number',
-    inputMode: 'numeric',
+    inputMode: step < 1 ? 'decimal' : 'numeric',
     min,
     max,
+    step,
     value,
     oninput: (e) => {
-      const n = parseInt(e.target.value, 10);
-      if (valid(n)) onvalue(n);
+      const n = read(e.target);
+      if (n >= min && n <= max) onvalue(snap(n));
     },
     onchange: (e) => {
-      const n = parseInt(e.target.value, 10);
-      const clamped = Math.min(max, Math.max(min, Number.isFinite(n) ? n : min));
+      const n = read(e.target);
+      const clamped = snap(Math.min(max, Math.max(min, Number.isFinite(n) ? n : min)));
       e.target.value = clamped;
       onvalue(clamped);
     },
   });
+}
+
+// Top/Bottom/Left/Right page margin inputs. `margins` is mutated in place,
+// then onchange() is called.
+export function marginFields(margins, onchange) {
+  const side = (label, key) => field(label, numberInput({
+    value: margins[key],
+    ...MARGIN_RANGE,
+    onvalue: (n) => { margins[key] = n; onchange(); },
+  }));
+  return h('div', { class: 'field-group' },
+    h('div', { class: 'field__label' }, 'Page margins (inches)'),
+    h('div', { class: 'field-row' }, side('Top', 'top'), side('Bottom', 'bottom')),
+    h('div', { class: 'field-row' }, side('Left', 'left'), side('Right', 'right')),
+    h('div', { class: 'field__hint' },
+      `${MARGIN_RANGE.min}–${MARGIN_RANGE.max}in. Leave margins on "Default" in the print dialog.`),
+  );
+}
+
+// Collapsible group for less-used settings. Starts closed.
+export function disclosure(title, ...children) {
+  return h('details', { class: 'disclosure' },
+    h('summary', { class: 'disclosure__summary' }, title),
+    h('div', { class: 'disclosure__body' }, ...children),
+  );
 }
 
 export function checkbox(label, checked, onchange, { variant = 'check' } = {}) {
