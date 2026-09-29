@@ -10,7 +10,8 @@ const MAX_SIZE = 30;
 // Printable area of a US Letter page with 0.5in margins, in inches.
 const PAGE_WIDTH_IN = 7.5;
 const PAGE_HEIGHT_IN = 10;
-const HEADER_HEIGHT_IN = 1.4;
+const HEADER_HEIGHT_IN = 1.4; // includes the Name/Date row
+const NAME_DATE_HEIGHT_IN = 0.45;
 const MAX_CELL_IN = 0.5;
 const WORD_BANK_COLUMNS = 3;
 
@@ -22,10 +23,19 @@ function defaultState() {
     mode: 'blank', // 'blank' | 'words'
     wordsText: '',
     directions: { horizontal: true, vertical: true, diagonal: true, backwards: false },
+    showNameDate: true,
     showWordBank: true,
     answerKey: true,
     blankLines: 12,
   };
+}
+
+function studentHeader(state) {
+  return sheetHeader({ title: state.title, fields: state.showNameDate ? ['Name', 'Date'] : [] });
+}
+
+function headerHeight(state) {
+  return HEADER_HEIGHT_IN - (state.showNameDate ? 0 : NAME_DATE_HEIGHT_IN);
 }
 
 // Largest square cell that fits the grid plus everything else on the page.
@@ -88,11 +98,11 @@ function wordBankView({ words, blankLines }) {
 }
 
 function blankSheets(state) {
-  const reserved = HEADER_HEIGHT_IN + wordBankHeight(state.blankLines, 0.45);
+  const reserved = headerHeight(state) + wordBankHeight(state.blankLines, 0.45);
   return [{
     label: 'Blank template',
     sheet: sheet(
-      sheetHeader({ title: state.title }),
+      studentHeader(state),
       gridView({ rows: state.rows, cols: state.cols, cellIn: cellSize(state.rows, state.cols, reserved), lined: true }),
       state.blankLines > 0 && wordBankView({ blankLines: state.blankLines }),
     ),
@@ -101,14 +111,14 @@ function blankSheets(state) {
 
 function puzzleSheets(state, puzzle) {
   const bankWords = state.showWordBank ? puzzle.placements : [];
-  const reserved = HEADER_HEIGHT_IN + wordBankHeight(bankWords.length, 0.3);
+  const reserved = headerHeight(state) + wordBankHeight(bankWords.length, 0.3);
   const cellIn = cellSize(state.rows, state.cols, reserved);
   const grid = { rows: state.rows, cols: state.cols, letters: puzzle.grid, cellIn };
 
   const pages = [{
     label: 'Puzzle',
     sheet: sheet(
-      sheetHeader({ title: state.title }),
+      studentHeader(state),
       gridView(grid),
       bankWords.length > 0 && wordBankView({ words: bankWords }),
     ),
@@ -254,6 +264,7 @@ function render(container) {
           sizeField('Columns', 'cols'),
         ),
         h('div', { class: 'field__hint' }, `Grid size can be ${MIN_SIZE}–${MAX_SIZE} in each direction.`),
+        checkbox('Name and date lines', state.showNameDate, (v) => { state.showNameDate = v; update(); }),
       ),
       blankPanel,
       wordsPanel,
