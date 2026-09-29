@@ -482,6 +482,112 @@ body {
   border-bottom: 1px solid #000;
 }
 
+/* ---------- Crossword ---------- */
+
+.sheet-placeholder {
+  margin: 1in 0 0;
+  color: var(--muted);
+  font-family: system-ui, sans-serif;
+}
+
+.cw-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), var(--cell));
+  grid-auto-rows: var(--cell);
+}
+
+.cw-cell { position: relative; }
+
+/* Grid lines, drawn in cell units (see gridView in crossword/index.js). */
+.cw-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.cw-lines path {
+  fill: none;
+  stroke: #000;
+  stroke-linecap: square;
+  stroke-width: 1px; /* matches the word search grid */
+}
+
+/* The preview is scaled down with `zoom`, which would shrink lines below one
+   screen pixel: they blur, and with crispEdges Firefox drops them entirely.
+   Undo the scale for the line width only, then snap to whole pixels.
+   Print is unscaled and uses the plain width above. */
+@media screen {
+  .cw-lines path {
+    stroke-width: calc(1px / var(--preview-scale, 1));
+    shape-rendering: crispEdges;
+  }
+}
+
+.cw-num {
+  position: absolute;
+  top: 1px;
+  left: 2px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: calc(var(--cell) * 0.28);
+  line-height: 1;
+}
+
+.cw-letter {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: calc(var(--cell) * 0.12);
+  font-family: "Courier New", Courier, monospace;
+  font-weight: 700;
+  font-size: calc(var(--cell) * 0.55);
+  line-height: 1;
+}
+
+.cw-clues {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 0.4in;
+  align-items: start;
+}
+
+.cw-clues__heading {
+  margin: 0 0 0.1in;
+  font-size: 14pt;
+  border-bottom: 1px solid #000;
+  padding-bottom: 4px;
+}
+
+.cw-clues__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 11pt;
+  line-height: 0.22in;
+}
+
+.cw-clue {
+  display: flex;
+  align-items: baseline;
+  gap: 0.08in;
+  margin-bottom: 0.08in;
+  break-inside: avoid;
+}
+
+.cw-clue__num { flex: none; min-width: 0.3in; font-weight: 700; text-align: right; }
+.cw-clue__text { flex: 1; }
+.cw-clue__blank { flex: 1; height: 0.32in; border-bottom: 1px solid #000; }
+
+/* Clue editor in the controls panel */
+.clue-editor { display: flex; flex-direction: column; gap: 12px; }
+.clue-editor[hidden] { display: none; }
+
 /* ---------- Print ---------- */
 
 /* Margins are overridden at runtime by setPageMargins() in js/components/sheet.js */

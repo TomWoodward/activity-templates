@@ -2,24 +2,6 @@
 
 const FILLER_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-export function normalizeWord(word) {
-  return word.toLocaleUpperCase().replace(/[^\p{L}]/gu, '');
-}
-
-// Split on newlines or commas, drop blanks and duplicates.
-export function parseWordList(text) {
-  const seen = new Set();
-  const words = [];
-  for (const raw of text.split(/[\n,]/)) {
-    const display = raw.trim();
-    const letters = normalizeWord(display);
-    if (!letters || seen.has(letters)) continue;
-    seen.add(letters);
-    words.push({ display, letters });
-  }
-  return words;
-}
-
 // Direction vectors as [rowStep, colStep].
 export function directionVectors({ horizontal = true, vertical = true, diagonal = true, backwards = false } = {}) {
   const vectors = [];

@@ -26,9 +26,28 @@ export function setPageMargins(margins) {
   marginStyle.textContent = `@page { margin: ${sides.join(' ')}; } :root { ${vars} }`;
 }
 
+// Page settings every activity keeps in its state, edited by advancedSettings()
+// in form.js.
+export function defaultPageSettings() {
+  return { margins: { ...DEFAULT_MARGINS }, showNameDate: true };
+}
+
 // A single printable page. Each sheet prints on its own page.
 export function sheet(...children) {
   return h('section', { class: 'sheet' }, ...children);
+}
+
+// Header for the page students fill in: title, plus Name/Date blanks if enabled.
+export function studentHeader({ title, showNameDate }) {
+  return sheetHeader({ title, fields: showNameDate ? ['Name', 'Date'] : [] });
+}
+
+// Height a sheetHeader() takes on the page, including the gap below it.
+// Keep in sync with the .sheet-header styles.
+const HEADER_HEIGHT_IN = 1.4;
+const NAME_DATE_HEIGHT_IN = 0.45;
+export function sheetHeaderHeight({ showNameDate }) {
+  return HEADER_HEIGHT_IN - (showNameDate ? 0 : NAME_DATE_HEIGHT_IN);
 }
 
 // Standard worksheet header: title plus fill-in-the-blank fields.

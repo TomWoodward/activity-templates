@@ -67,6 +67,17 @@ export function marginFields(margins, onchange) {
   );
 }
 
+// The standard "Advanced" group: page margins and the Name/Date toggle, plus
+// any activity-specific extras. Reads and mutates `settings` (see
+// defaultPageSettings() in sheet.js), then calls onchange().
+export function advancedSettings(settings, onchange, ...extra) {
+  return disclosure('Advanced',
+    marginFields(settings.margins, onchange),
+    checkbox('Name and date lines', settings.showNameDate, (v) => { settings.showNameDate = v; onchange(); }),
+    ...extra,
+  );
+}
+
 // Collapsible group for less-used settings. Starts closed.
 export function disclosure(title, ...children) {
   return h('details', { class: 'disclosure' },

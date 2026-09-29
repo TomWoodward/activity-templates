@@ -1,22 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  normalizeWord,
-  parseWordList,
-  directionVectors,
-  generatePuzzle,
-  answerCells,
-} from '../js/activities/word-search/generator.js';
-
-// Deterministic RNG so failures are reproducible.
-function seeded(seed) {
-  return () => {
-    seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+import { directionVectors, generatePuzzle, answerCells } from '../js/activities/word-search/generator.js';
+import { parseWordList } from '../js/lib/words.js';
+import { seeded } from './helpers.js';
 
 const ALL_DIRECTIONS = { horizontal: true, vertical: true, diagonal: true, backwards: true };
 
@@ -25,18 +11,6 @@ function readPlacement(grid, { row, col, dr, dc, length }) {
   for (let i = 0; i < length; i++) out += grid[row + dr * i][col + dc * i];
   return out;
 }
-
-test('normalizeWord uppercases and strips non-letters', () => {
-  assert.equal(normalizeWord("ice cream"), 'ICECREAM');
-  assert.equal(normalizeWord("rock-n-roll!"), 'ROCKNROLL');
-  assert.equal(normalizeWord('123'), '');
-});
-
-test('parseWordList splits on newlines and commas, drops blanks and duplicates', () => {
-  const words = parseWordList('apple, Banana\n\n  apple \ncherry pie,,');
-  assert.deepEqual(words.map((w) => w.letters), ['APPLE', 'BANANA', 'CHERRYPIE']);
-  assert.equal(words[2].display, 'cherry pie');
-});
 
 test('directionVectors respects toggles', () => {
   assert.equal(directionVectors({ horizontal: true, vertical: false, diagonal: false }).length, 1);

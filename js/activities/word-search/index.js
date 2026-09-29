@@ -1,18 +1,18 @@
 import { h, svg } from '../../dom.js';
 import {
-  sheet, sheetHeader, printableArea, setPageMargins, DEFAULT_MARGINS,
+  sheet, sheetHeader, studentHeader, sheetHeaderHeight, printableArea, setPageMargins, defaultPageSettings,
 } from '../../components/sheet.js';
 import { createPreview } from '../../components/preview.js';
+import { activityWorkspace, createStatus } from '../../components/workspace.js';
 import {
-  section, field, numberInput, checkbox, segmented, button, disclosure, marginFields,
+  section, field, numberInput, checkbox, segmented, button, advancedSettings,
 } from '../../components/form.js';
-import { parseWordList, generatePuzzle, answerCells } from './generator.js';
+import { generatePuzzle, answerCells } from './generator.js';
+import { parseWordList } from '../../lib/words.js';
 
 const MIN_SIZE = 5;
 const MAX_SIZE = 30;
 
-const HEADER_HEIGHT_IN = 1.4; // includes the Name/Date row
-const NAME_DATE_HEIGHT_IN = 0.45;
 const MAX_CELL_IN = 0.5;
 const MIN_READABLE_CELL_IN = 0.25; // below this, warn that the grid is hard to use
 const BLANK_LINE_HEIGHT_IN = 0.45;
@@ -27,20 +27,11 @@ function defaultState() {
     mode: 'blank', // 'blank' | 'words'
     wordsText: '',
     directions: { horizontal: true, vertical: true, diagonal: true, backwards: false },
-    showNameDate: true,
-    margins: { ...DEFAULT_MARGINS },
+    ...defaultPageSettings(),
     showWordBank: true,
     answerKey: true,
     blankLines: 12,
   };
-}
-
-function studentHeader(state) {
-  return sheetHeader({ title: state.title, fields: state.showNameDate ? ['Name', 'Date'] : [] });
-}
-
-function headerHeight(state) {
-  return HEADER_HEIGHT_IN - (state.showNameDate ? 0 : NAME_DATE_HEIGHT_IN);
 }
 
 // Largest square cell that fits the grid plus everything else on the page.
@@ -55,11 +46,11 @@ function wordBankHeight(itemCount, lineHeightIn) {
 }
 
 function blankCellSize(state) {
-  return cellSize(state, headerHeight(state) + wordBankHeight(state.blankLines, BLANK_LINE_HEIGHT_IN));
+  return cellSize(state, sheetHeaderHeight(state) + wordBankHeight(state.blankLines, BLANK_LINE_HEIGHT_IN));
 }
 
 function puzzleCellSize(state, bankWordCount) {
-  return cellSize(state, headerHeight(state) + wordBankHeight(bankWordCount, WORD_LINE_HEIGHT_IN));
+  return cellSize(state, sheetHeaderHeight(state) + wordBankHeight(bankWordCount, WORD_LINE_HEIGHT_IN));
 }
 
 function gridView({ rows, cols, letters, cellIn, lined = false, placements = null }) {
@@ -154,7 +145,7 @@ function render(container) {
   let puzzleKey = '';
 
   const preview = createPreview();
-  const status = h('div', { class: 'status', role: 'status' });
+  const status = createStatus();
   const wordCount = h('span');
   const blankPanel = h('div', { class: 'mode-panel' });
   const wordsPanel = h('div', { class: 'mode-panel' });
@@ -179,7 +170,7 @@ function render(container) {
     setPageMargins(state.margins);
 
     if (!isWords) {
-      showMessages(smallGridWarning(
+      status.show(smallGridWarning(
         blankCellSize(state),
         `fewer rows${state.blankLines > 0 ? ', fewer word bank lines,' : ''} or smaller margins`,
       ));
@@ -205,12 +196,8 @@ function render(container) {
       puzzleCellSize(state, bankCount),
       `fewer rows${bankCount > 0 ? ', fewer words, hiding the word bank,' : ''} or smaller margins`,
     ));
-    showMessages(...messages);
+    status.show(...messages);
     preview.show(puzzleSheets(state, puzzle));
-  }
-
-  function showMessages(...messages) {
-    status.replaceChildren(...messages.filter(Boolean).map((m) => h('p', { class: 'status__msg' }, m)));
   }
 
   function smallGridWarning(cellIn, suggestions) {
@@ -270,10 +257,12 @@ function render(container) {
     ),
   );
 
-  const controls = h('aside', { class: 'controls no-print' },
-    h('div', { class: 'controls__body' },
-      h('a', { class: 'back-link', href: '#/' }, '← All activities'),
-      h('h1', { class: 'controls__title' }, 'Word Search'),
+  container.append(activityWorkspace({
+    title: 'Word Search',
+    preview,
+    status,
+    actions: [shuffleButton],
+    controls: [
       segmented({
         label: 'Grid type',
         value: state.mode,
@@ -297,21 +286,9 @@ function render(container) {
       ),
       blankPanel,
       wordsPanel,
-      disclosure('Advanced',
-        marginFields(state.margins, () => update()),
-        checkbox('Name and date lines', state.showNameDate, (v) => { state.showNameDate = v; update(); }),
-      ),
-    ),
-    h('div', { class: 'controls__footer' },
-      status,
-      h('div', { class: 'controls__actions' },
-        shuffleButton,
-        button('Print', () => window.print(), { primary: true }),
-      ),
-    ),
-  );
-
-  container.append(h('div', { class: 'workspace' }, controls, preview.el));
+      advancedSettings(state, () => update()),
+    ],
+  }));
   update();
 }
 
